@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description:  Creates NATGateway in web tier so that private subnets can use the Default Private Route Table to forward outbound traffic through the NATGW to the IGW. Requires VPC deployment.
+
+Resources:
+
+# Create Elastic IPs for all three NATGW
+  NATGWEIPA:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  
+  NATGWEIPB:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  
+  NATGWEIPC:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  
+# Create NATGW across three AZs 
+  NatGatewayA:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIPA.AllocationId
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-weba
+  
+  NatGatewayB:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIPB.AllocationId
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-webb
+  
+  NatGatewayC:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt EIPC.AllocationId
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-webb
+
+# Create Private RT for each AZ
+  RouteTablePrivateA: 
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !ImportValue cloudchase-vpc1
+      Tags:
+      - Key: Name
+        Value: cloudchase-vpc1-rt-privateA
+  
+  RouteTablePrivateB: 
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !ImportValue cloudchase-vpc1
+      Tags:
+      - Key: Name
+        Value: cloudchase-vpc1-rt-privateB
+  
+  RouteTablePrivateC: 
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !ImportValue -vpc1
+      Tags:
+      - Key: Name
+        Value: cloudchase-vpc1-rt-privateC
+
+# Create Routes for private RT  
+  RouteNatGWA: 
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateA
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGatewayA
+  
+  RouteNatGWB: 
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateB
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGatewayB
+  
+  RouteNatGWC: 
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateC
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGatewayC
+
+#Assocaite private RTs to private subnet tiers
+  RouteTableAssociationReservedA:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-reserveda
+      RouteTableId: !Ref RouteTablePrivateA
+  
+  RouteTableAssociationAppA:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-appa
+      RouteTableId: !Ref RouteTablePrivateA
+  
+  RouteTableAssociationDBA:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-dba
+      RouteTableId: !Ref RouteTablePrivateA
+  
+  RouteTableAssociationReservedB:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-reservedb
+      RouteTableId: !Ref RouteTablePrivateB
+  
+  RouteTableAssociationAppB:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-appb
+      RouteTableId: !Ref RouteTablePrivateB
+  
+  RouteTableAssociationDBB:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-dbb
+      RouteTableId: !Ref RouteTablePrivateB
+  
+  RouteTableAssociationReservedC:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-reservedc
+      RouteTableId: !Ref RouteTablePrivateC
+  
+  RouteTableAssociationAppC:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-appc
+      RouteTableId: !Ref RouteTablePrivateC
+  
+  RouteTableAssociationDBC:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !ImportValue cloudchase-vpc1-subnet-dbc
+      RouteTableId: !Ref RouteTablePrivateC
